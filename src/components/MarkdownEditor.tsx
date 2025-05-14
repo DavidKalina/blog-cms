@@ -127,8 +127,51 @@ export function MarkdownEditor({ content, onChange, className }: MarkdownEditorP
         }
         return false;
       },
+      attributes: {
+        class: "prose-mirror-editor",
+        style: `
+          caret-color: rgb(59 130 246);
+          caret-width: 3px;
+        `,
+      },
     },
   });
+
+  // Add custom styles for the editor
+  useEffect(() => {
+    if (!editor) return;
+
+    // Add custom styles for the caret
+    const style = document.createElement("style");
+    style.textContent = `
+      .prose-mirror-editor {
+        caret-color: transparent !important;
+      }
+      .prose-mirror-editor::selection {
+        background-color: rgba(59, 130, 246, 0.2);
+      }
+      .dark .prose-mirror-editor {
+        caret-color: transparent !important;
+      }
+      .dark .prose-mirror-editor::selection {
+        background-color: rgba(96, 165, 250, 0.2);
+      }
+      /* Custom caret styling */
+      .prose-mirror-editor .ProseMirror-cursor {
+        border-left: 3px solid rgb(59, 130, 246) !important;
+        border-right: none !important;
+        margin-left: -1px;
+      }
+      .dark .prose-mirror-editor .ProseMirror-cursor {
+        border-left: 3px solid rgb(96, 165, 250) !important;
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, [editor]);
 
   // Add resize observer to handle image resizing
   useEffect(() => {
@@ -438,6 +481,7 @@ export function MarkdownEditor({ content, onChange, className }: MarkdownEditorP
           className="prose prose-zinc dark:prose-invert max-w-4xl mx-auto p-6 min-h-[calc(100vh-4rem)]
             [&_.ProseMirror]:outline-none [&_.ProseMirror]:border-none [&_.ProseMirror]:focus:outline-none [&_.ProseMirror]:focus:border-none
             [&_.ProseMirror]:font-mono [&_.ProseMirror]:text-zinc-600 dark:[&_.ProseMirror]:text-zinc-300
+            [&_.ProseMirror_caret]:!visible [&_.ProseMirror_caret]:!w-[3px] [&_.ProseMirror_caret]:!bg-blue-500 dark:[&_.ProseMirror_caret]:!bg-blue-400 [&_.ProseMirror_caret]:!animate-none
             [&_.ProseMirror_h1]:text-3xl [&_.ProseMirror_h1]:font-bold [&_.ProseMirror_h1]:text-zinc-900 dark:[&_.ProseMirror_h1]:text-zinc-200 [&_.ProseMirror_h1]:mb-4
             [&_.ProseMirror_h2]:text-2xl [&_.ProseMirror_h2]:font-bold [&_.ProseMirror_h2]:text-zinc-900 dark:[&_.ProseMirror_h2]:text-zinc-200 [&_.ProseMirror_h2]:mb-3
             [&_.ProseMirror_h3]:text-xl [&_.ProseMirror_h3]:font-bold [&_.ProseMirror_h3]:text-zinc-900 dark:[&_.ProseMirror_h3]:text-zinc-200 [&_.ProseMirror_h3]:mb-2
