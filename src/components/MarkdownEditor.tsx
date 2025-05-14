@@ -6,10 +6,31 @@ import Placeholder from "@tiptap/extension-placeholder";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
 import ImageResize from "tiptap-extension-resize-image";
+import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
+import { common, createLowlight } from "lowlight";
+import js from "highlight.js/lib/languages/javascript";
+import ts from "highlight.js/lib/languages/typescript";
+import css from "highlight.js/lib/languages/css";
+import html from "highlight.js/lib/languages/xml";
+import json from "highlight.js/lib/languages/json";
+import python from "highlight.js/lib/languages/python";
+import bash from "highlight.js/lib/languages/bash";
 import { cn } from "../lib/utils";
 import { useEffect } from "react";
 import { Toolbar } from "./editor/Toolbar";
 import { EditorContentArea } from "./editor/EditorContent";
+
+// Register languages
+const lowlight = createLowlight(common);
+
+// Register additional languages
+lowlight.register("javascript", js);
+lowlight.register("typescript", ts);
+lowlight.register("css", css);
+lowlight.register("html", html);
+lowlight.register("json", json);
+lowlight.register("python", python);
+lowlight.register("bash", bash);
 
 interface MarkdownEditorProps {
   content: string;
@@ -23,6 +44,13 @@ export function MarkdownEditor({ content, onChange, className }: MarkdownEditorP
       StarterKit.configure({
         heading: {
           levels: [1, 2, 3],
+        },
+        codeBlock: false, // Disable the default code block
+      }),
+      CodeBlockLowlight.configure({
+        lowlight,
+        HTMLAttributes: {
+          class: "rounded-lg",
         },
       }),
       TaskList,
