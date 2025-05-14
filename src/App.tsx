@@ -1,24 +1,19 @@
-import AnimatedBackground from "./components/AnimatedBackground";
-import { MarkdownEditor } from "./components/MarkdownEditor";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./contexts/ThemeProvider";
-
-function AppContent() {
-  return (
-    <div className="h-screen flex flex-col">
-      <MarkdownEditor
-        content="# Welcome to your new markdown editor\n\nStart writing your content here..."
-        onChange={() => {}}
-        className="flex-1"
-      />
-      <AnimatedBackground />
-    </div>
-  );
-}
+import { Dashboard } from "./pages/Dashboard";
+import { Editor } from "./pages/Editor";
 
 function App() {
   return (
     <ThemeProvider>
-      <AppContent />
+      <Router>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/editor" element={<Editor />} />
+          <Route path="/editor/:id" element={<Editor />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
     </ThemeProvider>
   );
 }
