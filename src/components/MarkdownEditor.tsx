@@ -15,9 +15,11 @@ import json from "highlight.js/lib/languages/json";
 import python from "highlight.js/lib/languages/python";
 import bash from "highlight.js/lib/languages/bash";
 import { cn } from "../lib/utils";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Toolbar } from "./editor/Toolbar";
 import { EditorContentArea } from "./editor/EditorContent";
+import { SettingsModal } from "./editor/SettingsModal";
+import type { Tables } from "../../database.types";
 
 // Register languages
 const lowlight = createLowlight(common);
@@ -31,13 +33,28 @@ lowlight.register("json", json);
 lowlight.register("python", python);
 lowlight.register("bash", bash);
 
+type Article = Tables<"articles">;
+
 interface MarkdownEditorProps {
   content: string;
   onChange: (content: string) => void;
   className?: string;
+  article: Article | null;
+  onArticleUpdate: (updates: Partial<Article>) => void;
+  tags: string[];
+  onTagsChange: (tags: string[]) => void;
 }
 
-export function MarkdownEditor({ content, onChange, className }: MarkdownEditorProps) {
+export function MarkdownEditor({
+  content,
+  onChange,
+  className,
+  article,
+  onArticleUpdate,
+  tags,
+  onTagsChange,
+}: MarkdownEditorProps) {
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -307,8 +324,16 @@ export function MarkdownEditor({ content, onChange, className }: MarkdownEditorP
         className
       )}
     >
-      <Toolbar editor={editor} />
+      <Toolbar editor={editor} onSettingsClick={() => setIsSettingsOpen(true)} />
       <EditorContentArea editor={editor} />
+      <SettingsModal
+        article={article}
+        onUpdate={onArticleUpdate}
+        tags={tags}
+        onTagsChange={onTagsChange}
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
     </div>
   );
 }
