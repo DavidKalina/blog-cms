@@ -1,13 +1,51 @@
 import { EditorContent, Editor } from "@tiptap/react";
 import "highlight.js/styles/github-dark.css";
+import { useEffect, useRef } from "react";
 
 interface EditorContentProps {
   editor: Editor;
 }
 
 export function EditorContentArea({ editor }: EditorContentProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current || !editor) return;
+
+    const container = containerRef.current;
+    let lastScrollTop = container.scrollTop;
+
+    const handleScroll = () => {
+      // Store the last manual scroll position
+      lastScrollTop = container.scrollTop;
+    };
+
+    const observer = new MutationObserver(() => {
+      // Restore the last manual scroll position after any content changes
+      requestAnimationFrame(() => {
+        container.scrollTop = lastScrollTop;
+      });
+    });
+
+    container.addEventListener("scroll", handleScroll);
+    observer.observe(container, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+      observer.disconnect();
+    };
+  }, [editor]);
+
   return (
-    <div className="flex-1 overflow-auto">
+    <div
+      ref={containerRef}
+      className="flex-1 overflow-auto overscroll-none"
+      style={{ scrollBehavior: "auto" }}
+    >
       <EditorContent
         editor={editor}
         className="prose prose-zinc dark:prose-invert max-w-4xl mx-auto p-6 min-h-[calc(100vh-4rem)]

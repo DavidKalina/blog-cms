@@ -4,7 +4,6 @@ import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import Placeholder from "@tiptap/extension-placeholder";
 import Link from "@tiptap/extension-link";
-import Image from "@tiptap/extension-image";
 import ImageResize from "tiptap-extension-resize-image";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { common, createLowlight } from "lowlight";
@@ -44,6 +43,9 @@ export function MarkdownEditor({ content, onChange, className }: MarkdownEditorP
       StarterKit.configure({
         heading: {
           levels: [1, 2, 3],
+          HTMLAttributes: {
+            class: "scroll-mt-16",
+          },
         },
         codeBlock: false,
       }),
@@ -64,11 +66,6 @@ export function MarkdownEditor({ content, onChange, className }: MarkdownEditorP
         openOnClick: false,
         HTMLAttributes: {
           class: "text-blue-500 hover:underline",
-        },
-      }),
-      Image.configure({
-        HTMLAttributes: {
-          class: "rounded-xl border border-zinc-200 dark:border-zinc-700 max-w-full",
         },
       }),
       ImageResize.configure({
@@ -105,6 +102,22 @@ export function MarkdownEditor({ content, onChange, className }: MarkdownEditorP
           }
         }
         return false;
+      },
+      handleClick: () => {
+        // Prevent default scroll behavior
+        return false;
+      },
+      handleDOMEvents: {
+        focus: (_view, event) => {
+          // Prevent automatic scrolling on focus
+          event.preventDefault();
+          return false;
+        },
+        blur: (_view, event) => {
+          // Prevent automatic scrolling on blur
+          event.preventDefault();
+          return false;
+        },
       },
       attributes: {
         class: "prose-mirror-editor",
