@@ -22,13 +22,15 @@ import {
   ListChecks,
   Moon,
   Sun,
+  Settings,
 } from "lucide-react";
 
 interface ToolbarProps {
   editor: Editor;
+  onSettingsClick: () => void;
 }
 
-export function Toolbar({ editor }: ToolbarProps) {
+export function Toolbar({ editor, onSettingsClick }: ToolbarProps) {
   const { theme, setTheme } = useTheme();
 
   const addLink = () => {
@@ -63,6 +65,15 @@ export function Toolbar({ editor }: ToolbarProps) {
             title="Redo"
           >
             <Redo className="w-4 h-4 text-white" />
+          </ToolbarButton>
+        </ToolbarSection>
+
+        <ToolbarDivider />
+
+        {/* Settings */}
+        <ToolbarSection>
+          <ToolbarButton onClick={onSettingsClick} title="Article Settings">
+            <Settings className="w-4 h-4 text-white" />
           </ToolbarButton>
         </ToolbarSection>
 

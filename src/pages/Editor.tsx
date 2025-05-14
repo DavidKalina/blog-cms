@@ -145,10 +145,18 @@ export function Editor() {
 
       // Start a transaction
       const { error: articleError } = await supabase.from("articles").upsert({
-        ...article,
-        markdown_content: fullContent,
+        id: article.id,
+        title: article.title,
+        slug: article.slug,
+        excerpt: article.excerpt,
+        category: article.category,
+        read_time: article.read_time,
         status,
+        markdown_content: fullContent,
+        html_content: article.html_content,
+        created_at: article.created_at,
         updated_at: new Date().toISOString(),
+        date: article.date,
       });
 
       if (articleError) throw articleError;
@@ -257,6 +265,10 @@ export function Editor() {
     );
   };
 
+  const handleArticleUpdate = (updates: Partial<Article>) => {
+    setArticle((prev) => (prev ? { ...prev, ...updates } : null));
+  };
+
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -330,6 +342,26 @@ export function Editor() {
           }
           onChange={handleContentChange}
           className="h-full"
+          article={
+            article || {
+              id: crypto.randomUUID(),
+              title: "Untitled Article",
+              slug: "untitled-article",
+              excerpt: "No excerpt provided",
+              category: "Uncategorized",
+              read_time: "5 min read",
+              status: "draft",
+              markdown_content: "",
+              html_content: null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              date: null,
+              tags: [],
+            }
+          }
+          onArticleUpdate={handleArticleUpdate}
+          tags={articleTags}
+          onTagsChange={setArticleTags}
         />
       </div>
     </div>
