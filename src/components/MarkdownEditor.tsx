@@ -1,4 +1,4 @@
-import { useEditor, EditorContent, BubbleMenu, FloatingMenu, Editor } from "@tiptap/react";
+import { useEditor, EditorContent, Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
@@ -17,7 +17,6 @@ import {
   Heading1,
   Heading2,
   Heading3,
-  CheckSquare,
   Code,
   Quote,
   Strikethrough,
@@ -384,98 +383,6 @@ export function MarkdownEditor({ content, onChange, className }: MarkdownEditorP
 
       {/* Editor Content with Scroll */}
       <div className="flex-1 overflow-auto">
-        {editor && (
-          <BubbleMenu
-            editor={editor}
-            tippyOptions={{ duration: 100 }}
-            className="flex gap-1 p-1 bg-gradient-to-br from-[#333] to-zinc-700 dark:from-zinc-700 dark:to-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg"
-          >
-            <MenuButton
-              onClick={() => editor.chain().focus().toggleBold().run()}
-              isActive={editor.isActive("bold")}
-              title="Bold"
-            >
-              <Bold className="w-4 h-4 text-white" />
-            </MenuButton>
-            <MenuButton
-              onClick={() => editor.chain().focus().toggleItalic().run()}
-              isActive={editor.isActive("italic")}
-              title="Italic"
-            >
-              <Italic className="w-4 h-4 text-white" />
-            </MenuButton>
-            <MenuButton
-              onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-              isActive={editor.isActive("heading", { level: 1 })}
-              title="Heading 1"
-            >
-              <Heading1 className="w-4 h-4 text-white" />
-            </MenuButton>
-            <MenuButton
-              onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-              isActive={editor.isActive("heading", { level: 2 })}
-              title="Heading 2"
-            >
-              <Heading2 className="w-4 h-4 text-white" />
-            </MenuButton>
-            <MenuButton
-              onClick={() => editor.chain().focus().toggleBulletList().run()}
-              isActive={editor.isActive("bulletList")}
-              title="Bullet List"
-            >
-              <List className="w-4 h-4 text-white" />
-            </MenuButton>
-            <MenuButton
-              onClick={() => editor.chain().focus().toggleOrderedList().run()}
-              isActive={editor.isActive("orderedList")}
-              title="Ordered List"
-            >
-              <ListOrdered className="w-4 h-4 text-white" />
-            </MenuButton>
-            <MenuButton
-              onClick={() => editor.chain().focus().toggleTaskList().run()}
-              isActive={editor.isActive("taskList")}
-              title="Task List"
-            >
-              <CheckSquare className="w-4 h-4 text-white" />
-            </MenuButton>
-            <MenuButton
-              onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-              isActive={editor.isActive("codeBlock")}
-              title="Code Block"
-            >
-              <Code className="w-4 h-4 text-white" />
-            </MenuButton>
-          </BubbleMenu>
-        )}
-
-        {editor && (
-          <FloatingMenu
-            editor={editor}
-            tippyOptions={{ duration: 100 }}
-            className="flex gap-1 p-1 bg-gradient-to-br from-[#333] to-zinc-700 dark:from-zinc-700 dark:to-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg"
-          >
-            <MenuButton
-              onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-              title="Heading 1"
-            >
-              <Heading1 className="w-4 h-4 text-white" />
-            </MenuButton>
-            <MenuButton
-              onClick={() => editor.chain().focus().toggleBulletList().run()}
-              title="Bullet List"
-            >
-              <List className="w-4 h-4 text-white" />
-            </MenuButton>
-            <MenuButton
-              onClick={() => editor.chain().focus().toggleTaskList().run()}
-              title="Task List"
-            >
-              <CheckSquare className="w-4 h-4 text-white" />
-            </MenuButton>
-          </FloatingMenu>
-        )}
-
         <EditorContent
           editor={editor}
           className="prose prose-zinc dark:prose-invert max-w-4xl mx-auto p-6 min-h-[calc(100vh-4rem)]
