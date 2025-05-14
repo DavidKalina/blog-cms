@@ -44,7 +44,7 @@ export function MarkdownEditor({ content, onChange, className }: MarkdownEditorP
         heading: {
           levels: [1, 2, 3],
           HTMLAttributes: {
-            class: "scroll-mt-16",
+            class: "",
           },
         },
         codeBlock: false,
@@ -104,19 +104,40 @@ export function MarkdownEditor({ content, onChange, className }: MarkdownEditorP
         return false;
       },
       handleClick: () => {
-        // Prevent default scroll behavior
-        return false;
+        const target = event?.target as HTMLElement;
+        if (
+          target?.tagName?.toLowerCase() === "h1" ||
+          target?.tagName?.toLowerCase() === "h2" ||
+          target?.tagName?.toLowerCase() === "h3"
+        ) {
+          return false;
+        }
+        return true;
       },
       handleDOMEvents: {
         focus: (_view, event) => {
-          // Prevent automatic scrolling on focus
-          event.preventDefault();
-          return false;
+          const target = event?.target as HTMLElement;
+          if (
+            target?.tagName?.toLowerCase() === "h1" ||
+            target?.tagName?.toLowerCase() === "h2" ||
+            target?.tagName?.toLowerCase() === "h3"
+          ) {
+            event.preventDefault();
+            return false;
+          }
+          return true;
         },
         blur: (_view, event) => {
-          // Prevent automatic scrolling on blur
-          event.preventDefault();
-          return false;
+          const target = event?.target as HTMLElement;
+          if (
+            target?.tagName?.toLowerCase() === "h1" ||
+            target?.tagName?.toLowerCase() === "h2" ||
+            target?.tagName?.toLowerCase() === "h3"
+          ) {
+            event.preventDefault();
+            return false;
+          }
+          return true;
         },
       },
       attributes: {
@@ -133,14 +154,52 @@ export function MarkdownEditor({ content, onChange, className }: MarkdownEditorP
   useEffect(() => {
     if (!editor || !content) return;
 
+    // Store current scroll position
+    const scrollPosition = window.scrollY;
+
     try {
       if (!editor.isDestroyed) {
-        editor.commands.setContent(content);
+        // Only update content if it's different from current content
+        const currentContent = editor.getHTML();
+        if (currentContent !== content) {
+          // Temporarily disable scroll behavior
+          const originalScrollBehavior = document.documentElement.style.scrollBehavior;
+          document.documentElement.style.scrollBehavior = "auto";
+
+          editor.commands.setContent(content);
+
+          // Restore scroll position and behavior
+          window.scrollTo(0, scrollPosition);
+          document.documentElement.style.scrollBehavior = originalScrollBehavior;
+        }
       }
     } catch (error) {
       console.error("Error initializing editor content:", error);
     }
   }, [editor, content]);
+
+  // Add scroll position preservation for editor updates
+  useEffect(() => {
+    if (!editor) return;
+
+    const handleUpdate = () => {
+      // Store scroll position before update
+      const scrollPosition = window.scrollY;
+
+      // Use requestAnimationFrame to restore scroll position after the update
+      requestAnimationFrame(() => {
+        window.scrollTo(0, scrollPosition);
+      });
+    };
+
+    editor.on("update", handleUpdate);
+    editor.on("transaction", handleUpdate);
+
+    return () => {
+      editor.off("update", handleUpdate);
+      editor.off("transaction", handleUpdate);
+    };
+  }, [editor]);
 
   // Cleanup on unmount
   useEffect(() => {
