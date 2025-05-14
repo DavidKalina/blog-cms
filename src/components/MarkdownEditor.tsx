@@ -19,9 +19,6 @@ import { cn } from "../lib/utils";
 import { useEffect } from "react";
 import { Toolbar } from "./editor/Toolbar";
 import { EditorContentArea } from "./editor/EditorContent";
-import { unified } from "unified";
-import remarkParse from "remark-parse";
-import remarkHtml from "remark-html";
 
 // Register languages
 const lowlight = createLowlight(common);
@@ -42,18 +39,6 @@ interface MarkdownEditorProps {
 }
 
 export function MarkdownEditor({ content, onChange, className }: MarkdownEditorProps) {
-  // Convert markdown to HTML for the editor
-  const markdownToHtml = async (markdown: string) => {
-    if (!markdown?.trim()) return "";
-    try {
-      const result = await unified().use(remarkParse).use(remarkHtml).process(markdown);
-      const html = result.toString();
-      return html;
-    } catch {
-      return "";
-    }
-  };
-
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -92,7 +77,7 @@ export function MarkdownEditor({ content, onChange, className }: MarkdownEditorP
         },
       }),
     ],
-    content: "",
+    content: content || "",
     onUpdate: ({ editor }: { editor: Editor }) => {
       const html = editor.getHTML();
       onChange(html);
@@ -131,22 +116,17 @@ export function MarkdownEditor({ content, onChange, className }: MarkdownEditorP
     },
   });
 
-  // Initialize editor with markdown content
+  // Initialize editor with content
   useEffect(() => {
     if (!editor || !content) return;
 
-    const initializeContent = async () => {
-      try {
-        const html = await markdownToHtml(content);
-        if (html && editor && !editor.isDestroyed) {
-          editor.commands.setContent(html);
-        }
-      } catch (error) {
-        console.error("Error initializing editor content:", error);
+    try {
+      if (!editor.isDestroyed) {
+        editor.commands.setContent(content);
       }
-    };
-
-    initializeContent();
+    } catch (error) {
+      console.error("Error initializing editor content:", error);
+    }
   }, [editor, content]);
 
   // Cleanup on unmount
@@ -196,28 +176,52 @@ export function MarkdownEditor({ content, onChange, className }: MarkdownEditorP
 
   // Add resize observer to handle image resizing
   useEffect(() => {
-    if (!editor) return;
+    if (!editor || editor.isDestroyed) return;
 
-    const observer = new ResizeObserver((entries) => {
-      entries.forEach((entry) => {
-        const img = entry.target as HTMLImageElement;
-        if (!img.dataset.nodeId) return;
+    // Wait for the editor to be ready
+    const setupResizeObserver = () => {
+      const observer = new ResizeObserver((entries) => {
+        entries.forEach((entry) => {
+          const img = entry.target as HTMLImageElement;
+          if (!img.dataset.nodeId) return;
 
-        const pos = parseInt(img.dataset.nodeId, 10);
-        if (isNaN(pos)) return;
+          const pos = parseInt(img.dataset.nodeId, 10);
+          if (isNaN(pos)) return;
 
-        const { width, height } = entry.contentRect;
-        editor.commands.updateAttributes("image", { width, height });
+          const { width, height } = entry.contentRect;
+          editor.commands.updateAttributes("image", { width, height, at: pos });
+        });
       });
-    });
 
-    const images = editor.view.dom.querySelectorAll("img");
-    images.forEach((img) => {
-      observer.observe(img);
-      img.dataset.nodeId = editor.view.posAtDOM(img, 0).toString();
-    });
+      // Only observe images that are already in the editor
+      const images = editor.view.dom.querySelectorAll("img");
+      images.forEach((img) => {
+        try {
+          const pos = editor.view.posAtDOM(img, 0);
+          if (pos !== null) {
+            img.dataset.nodeId = pos.toString();
+            observer.observe(img);
+          }
+        } catch (error) {
+          console.error("Error setting up image observer:", error);
+        }
+      });
 
-    return () => observer.disconnect();
+      return observer;
+    };
+
+    // Small delay to ensure editor is ready
+    const timeoutId = setTimeout(() => {
+      const observer = setupResizeObserver();
+      return () => {
+        observer.disconnect();
+        clearTimeout(timeoutId);
+      };
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, [editor]);
 
   if (!editor) {
