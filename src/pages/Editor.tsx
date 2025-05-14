@@ -69,6 +69,7 @@ export function Editor() {
   const isNewArticle = !id;
 
   const [article, setArticle] = useState<Article | null>(null);
+  const [articleTags, setArticleTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(!isNewArticle);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -80,27 +81,49 @@ export function Editor() {
       if (!id) return;
 
       try {
-        const { data, error } = await supabase.from("articles").select("*").eq("id", id).single();
+        // Fetch article data
+        const { data: articleData, error: articleError } = await supabase
+          .from("articles")
+          .select("*")
+          .eq("id", id)
+          .single();
 
-        if (error) throw error;
+        if (articleError) throw articleError;
+
+        // Fetch article tags
+        const { data: tagsData, error: tagsError } = await supabase
+          .from("article_tags")
+          .select("tag_id")
+          .eq("article_id", id);
+
+        if (tagsError) throw tagsError;
+
+        // Get tag names
+        const tagIds = tagsData.map((t) => t.tag_id);
+        const { data: tagNames, error: tagNamesError } = await supabase
+          .from("tags")
+          .select("name")
+          .in("id", tagIds);
+
+        if (tagNamesError) throw tagNamesError;
 
         // Parse frontmatter from content if it exists
-        if (data.markdown_content) {
-          const { frontmatter, content } = parseFrontmatter(data.markdown_content);
+        let markdownContent = articleData.markdown_content || "";
+        if (markdownContent) {
+          const { frontmatter, content } = parseFrontmatter(markdownContent);
           if (frontmatter) {
             // Update article with frontmatter data
-            data.title = frontmatter.title || data.title;
-            data.excerpt = frontmatter.excerpt || data.excerpt;
-            data.category = frontmatter.category || data.category;
-            data.date = frontmatter.date || data.date;
-            // Store tags in a new field
-            data.tags = frontmatter.tags;
+            articleData.title = frontmatter.title || articleData.title;
+            articleData.excerpt = frontmatter.excerpt || articleData.excerpt;
+            articleData.category = frontmatter.category || articleData.category;
+            articleData.date = frontmatter.date || articleData.date;
             // Update content without frontmatter
-            data.markdown_content = content;
+            markdownContent = content;
           }
         }
 
-        setArticle(data);
+        setArticle({ ...articleData, markdown_content: markdownContent });
+        setArticleTags(tagNames.map((t) => t.name));
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to fetch article");
       } finally {
@@ -117,16 +140,63 @@ export function Editor() {
     setSaving(true);
     try {
       // Generate frontmatter and combine with content
-      const fullContent = generateFrontmatter(article) + article.markdown_content;
+      const fullContent =
+        generateFrontmatter({ ...article, tags: articleTags }) + article.markdown_content;
 
-      const { error } = await supabase.from("articles").upsert({
+      // Start a transaction
+      const { error: articleError } = await supabase.from("articles").upsert({
         ...article,
         markdown_content: fullContent,
         status,
         updated_at: new Date().toISOString(),
       });
 
-      if (error) throw error;
+      if (articleError) throw articleError;
+
+      // If we have an article ID, update the tags
+      if (article.id) {
+        // Delete existing tags
+        const { error: deleteError } = await supabase
+          .from("article_tags")
+          .delete()
+          .eq("article_id", article.id);
+
+        if (deleteError) throw deleteError;
+
+        // Insert new tags
+        if (articleTags.length > 0) {
+          // First ensure all tags exist
+          const { data: existingTags, error: tagsError } = await supabase
+            .from("tags")
+            .select("id, name")
+            .in("name", articleTags);
+
+          if (tagsError) throw tagsError;
+
+          const existingTagNames = new Set(existingTags.map((t) => t.name));
+          const newTags = articleTags.filter((name) => !existingTagNames.has(name));
+
+          if (newTags.length > 0) {
+            const { data: insertedTags, error: insertError } = await supabase
+              .from("tags")
+              .insert(newTags.map((name) => ({ name })))
+              .select();
+
+            if (insertError) throw insertError;
+            existingTags.push(...insertedTags);
+          }
+
+          // Create article-tag relationships
+          const { error: relationError } = await supabase.from("article_tags").insert(
+            existingTags.map((tag) => ({
+              article_id: article.id,
+              tag_id: tag.id,
+            }))
+          );
+
+          if (relationError) throw relationError;
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save article");
     } finally {
