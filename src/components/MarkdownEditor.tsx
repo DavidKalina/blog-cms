@@ -19,6 +19,9 @@ import { cn } from "../lib/utils";
 import { useEffect } from "react";
 import { Toolbar } from "./editor/Toolbar";
 import { EditorContentArea } from "./editor/EditorContent";
+import { unified } from "unified";
+import remarkParse from "remark-parse";
+import remarkHtml from "remark-html";
 
 // Register languages
 const lowlight = createLowlight(common);
@@ -39,13 +42,19 @@ interface MarkdownEditorProps {
 }
 
 export function MarkdownEditor({ content, onChange, className }: MarkdownEditorProps) {
+  // Convert markdown to HTML for the editor
+  const markdownToHtml = async (markdown: string) => {
+    const result = await unified().use(remarkParse).use(remarkHtml).process(markdown);
+    return result.toString();
+  };
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         heading: {
           levels: [1, 2, 3],
         },
-        codeBlock: false, // Disable the default code block
+        codeBlock: false,
       }),
       CodeBlockLowlight.configure({
         lowlight,
@@ -77,9 +86,10 @@ export function MarkdownEditor({ content, onChange, className }: MarkdownEditorP
         },
       }),
     ],
-    content,
+    content: "",
     onUpdate: ({ editor }: { editor: Editor }) => {
-      onChange(editor.getHTML());
+      const html = editor.getHTML();
+      onChange(html);
     },
     editorProps: {
       handlePaste: (view, event) => {
@@ -114,6 +124,15 @@ export function MarkdownEditor({ content, onChange, className }: MarkdownEditorP
       },
     },
   });
+
+  // Initialize editor with markdown content
+  useEffect(() => {
+    if (editor && content) {
+      markdownToHtml(content).then((html) => {
+        editor.commands.setContent(html);
+      });
+    }
+  }, [editor, content]);
 
   // Add custom styles for the editor
   useEffect(() => {

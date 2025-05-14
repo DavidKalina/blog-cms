@@ -1,16 +1,219 @@
 import { MarkdownEditor } from "../components/MarkdownEditor";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
+import type { Tables } from "../../database.types";
+
+type Article = Tables<"articles">;
+
+interface Frontmatter {
+  title: string;
+  excerpt: string;
+  category: string;
+  date: string;
+  tags: string[];
+}
+
+function parseFrontmatter(content: string): { frontmatter: Frontmatter | null; content: string } {
+  const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/;
+  const match = content.match(frontmatterRegex);
+
+  if (!match) {
+    return { frontmatter: null, content };
+  }
+
+  const [, frontmatterStr, mainContent] = match;
+  const frontmatter: Frontmatter = {
+    title: "",
+    excerpt: "",
+    category: "",
+    date: "",
+    tags: [],
+  };
+
+  // Parse frontmatter fields
+  const lines = frontmatterStr.split("\n");
+  for (const line of lines) {
+    const [key, ...valueParts] = line.split(":");
+    const value = valueParts.join(":").trim();
+
+    if (key === "title") frontmatter.title = value.replace(/^"|"$/g, "");
+    else if (key === "excerpt") frontmatter.excerpt = value.replace(/^"|"$/g, "");
+    else if (key === "category") frontmatter.category = value.replace(/^"|"$/g, "");
+    else if (key === "date") frontmatter.date = value.replace(/^"|"$/g, "");
+    else if (key === "tags") {
+      try {
+        frontmatter.tags = JSON.parse(value);
+      } catch {
+        frontmatter.tags = [];
+      }
+    }
+  }
+
+  return { frontmatter, content: mainContent.trim() };
+}
+
+function generateFrontmatter(article: Article): string {
+  return `---\ntitle: "${article.title}"\nexcerpt: "${article.excerpt}"\ncategory: "${
+    article.category
+  }"\ndate: "${article.date || new Date().toISOString()}"\ntags: ${JSON.stringify(
+    article.tags || []
+  )}\n---\n\n`;
+}
 
 export function Editor() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params.id;
   const navigate = useNavigate();
   const isNewArticle = !id;
 
-  // TODO: Fetch article content if editing existing article
-  const content = isNewArticle
-    ? "# New Article\n\nStart writing your content here..."
-    : "# Loading article...";
+  const [article, setArticle] = useState<Article | null>(null);
+  const [loading, setLoading] = useState(!isNewArticle);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (isNewArticle) return;
+
+    async function fetchArticle() {
+      if (!id) return;
+
+      try {
+        const { data, error } = await supabase.from("articles").select("*").eq("id", id).single();
+
+        if (error) throw error;
+
+        // Parse frontmatter from content if it exists
+        if (data.markdown_content) {
+          const { frontmatter, content } = parseFrontmatter(data.markdown_content);
+          if (frontmatter) {
+            // Update article with frontmatter data
+            data.title = frontmatter.title || data.title;
+            data.excerpt = frontmatter.excerpt || data.excerpt;
+            data.category = frontmatter.category || data.category;
+            data.date = frontmatter.date || data.date;
+            // Store tags in a new field
+            data.tags = frontmatter.tags;
+            // Update content without frontmatter
+            data.markdown_content = content;
+          }
+        }
+
+        setArticle(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to fetch article");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchArticle();
+  }, [id, isNewArticle]);
+
+  const handleSave = async (status: Article["status"] = "draft") => {
+    if (!article?.markdown_content) return;
+
+    setSaving(true);
+    try {
+      // Generate frontmatter and combine with content
+      const fullContent = generateFrontmatter(article) + article.markdown_content;
+
+      const { error } = await supabase.from("articles").upsert({
+        ...article,
+        markdown_content: fullContent,
+        status,
+        updated_at: new Date().toISOString(),
+      });
+
+      if (error) throw error;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save article");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    if (!article?.markdown_content || !article.id) return;
+
+    setSaving(true);
+    try {
+      // Generate frontmatter and combine with content before publishing
+      const fullContent = generateFrontmatter(article) + article.markdown_content;
+
+      // Update the article with frontmatter before publishing
+      await supabase
+        .from("articles")
+        .update({ markdown_content: fullContent })
+        .eq("id", article.id);
+
+      const { error } = await supabase.rpc("publish_article", {
+        article_id: article.id,
+      });
+
+      if (error) throw error;
+      setArticle((prev) => (prev ? { ...prev, status: "published" } : null));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to publish article");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleContentChange = (content: string) => {
+    setArticle((prev) =>
+      prev
+        ? {
+            ...prev,
+            markdown_content: content,
+            html_content: null, // We'll generate this on save
+          }
+        : {
+            id: crypto.randomUUID(),
+            title: "Untitled Article",
+            slug: "untitled-article",
+            excerpt: "No excerpt provided",
+            category: "Uncategorized",
+            read_time: "5 min read",
+            status: "draft",
+            markdown_content: content,
+            html_content: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            date: null,
+            tags: [],
+          }
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-900 dark:border-zinc-100" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center">
+        <div className="bg-red-100 dark:bg-red-900/20 rounded-full p-4 mb-6">
+          <ArrowLeft className="w-8 h-8 text-red-600 dark:text-red-400" />
+        </div>
+        <h3 className="font-mono text-xl font-bold text-red-600 dark:text-red-400 mb-2">
+          Error Loading Article
+        </h3>
+        <p className="font-mono text-zinc-600 dark:text-zinc-400 max-w-md mb-8">{error}</p>
+        <button
+          onClick={() => navigate("/")}
+          className="px-4 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-full font-mono text-sm hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
+        >
+          Back to Dashboard
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex flex-col">
@@ -26,11 +229,23 @@ export function Editor() {
               <span className="font-mono text-sm">Back to Dashboard</span>
             </button>
             <div className="flex items-center gap-4">
-              <button className="px-4 py-2 text-sm font-mono text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
-                Save Draft
+              <button
+                onClick={() => handleSave("draft")}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-mono text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? "Saving..." : "Save Draft"}
               </button>
-              <button className="px-4 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-full font-mono text-sm hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors">
-                Publish
+              <button
+                onClick={handlePublish}
+                disabled={saving || article?.status === "published"}
+                className="px-4 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-full font-mono text-sm hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving
+                  ? "Publishing..."
+                  : article?.status === "published"
+                  ? "Published"
+                  : "Publish"}
               </button>
             </div>
           </div>
@@ -39,7 +254,13 @@ export function Editor() {
 
       {/* Editor Content */}
       <div className="flex-1 overflow-hidden">
-        <MarkdownEditor content={content} onChange={() => {}} className="h-full" />
+        <MarkdownEditor
+          content={
+            article?.markdown_content || "# New Article\n\nStart writing your content here..."
+          }
+          onChange={handleContentChange}
+          className="h-full"
+        />
       </div>
     </div>
   );

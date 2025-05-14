@@ -1,23 +1,37 @@
 import { Badge } from "../components/ui/badge";
-import { BookOpen, Clock, MessageSquare, Plus } from "lucide-react";
+import { BookOpen, Clock, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
+import type { Tables } from "../../database.types";
 
-// Temporary mock data - replace with actual data fetching
-const mockPosts = [
-  {
-    id: "1",
-    title: "Getting Started with React",
-    excerpt: "Learn the basics of React and how to build your first application...",
-    category: "Web Development",
-    status: "published",
-    readTime: "5 min read",
-    comments: 3,
-    createdAt: "2024-03-20",
-  },
-  // Add more mock posts as needed
-];
+type Article = Tables<"articles">;
 
 export function Dashboard() {
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchArticles() {
+      try {
+        const { data, error } = await supabase
+          .from("articles")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+        setArticles(data || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to fetch articles");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchArticles();
+  }, []);
+
   return (
     <main className="min-h-screen pt-20 bg-gradient-to-b from-white/80 to-zinc-50/80 dark:from-zinc-800/95 dark:to-zinc-900/95">
       {/* Hero Section */}
@@ -62,11 +76,26 @@ export function Dashboard() {
 
         {/* Articles Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-          {mockPosts.length ? (
-            mockPosts.map((post) => (
+          {loading ? (
+            <div className="col-span-full flex flex-col items-center justify-center py-16 px-4 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-900 dark:border-zinc-100 mb-4" />
+              <p className="font-mono text-zinc-600 dark:text-zinc-400">Loading articles...</p>
+            </div>
+          ) : error ? (
+            <div className="col-span-full flex flex-col items-center justify-center py-16 px-4 text-center">
+              <div className="bg-red-100 dark:bg-red-900/20 rounded-full p-4 mb-6">
+                <BookOpen className="w-8 h-8 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="font-mono text-xl font-bold text-red-600 dark:text-red-400 mb-2">
+                Error Loading Articles
+              </h3>
+              <p className="font-mono text-zinc-600 dark:text-zinc-400 max-w-md">{error}</p>
+            </div>
+          ) : articles.length > 0 ? (
+            articles.map((article) => (
               <Link
-                key={post.id}
-                to={`/editor/${post.id}`}
+                key={article.id}
+                to={`/editor/${article.id}`}
                 className="group block bg-white dark:bg-zinc-800 rounded-2xl lg:rounded-3xl 
                   border-2 border-zinc-100 dark:border-zinc-700/50 
                   hover:border-black dark:hover:border-white 
@@ -81,21 +110,25 @@ export function Dashboard() {
                       {/* Status Badge */}
                       <Badge
                         className={`${
-                          post.status === "published"
+                          article.status === "published"
                             ? "bg-green-500/20 text-green-500"
-                            : "bg-yellow-500/20 text-yellow-500"
+                            : article.status === "draft"
+                            ? "bg-yellow-500/20 text-yellow-500"
+                            : "bg-zinc-500/20 text-zinc-500"
                         } px-3 lg:px-4 py-2 rounded-full text-[10px] lg:text-xs font-mono mb-4`}
                       >
-                        {post.status}
+                        {article.status}
                       </Badge>
 
                       {/* Title */}
                       <h3 className="font-mono text-xl font-bold text-white mb-3 group-hover:text-white/90 transition-colors duration-300">
-                        {post.title}
+                        {article.title}
                       </h3>
 
                       {/* Excerpt */}
-                      <p className="font-mono text-sm text-white/60 line-clamp-3">{post.excerpt}</p>
+                      <p className="font-mono text-sm text-white/60 line-clamp-3">
+                        {article.excerpt}
+                      </p>
                     </div>
                   </div>
 
@@ -106,11 +139,10 @@ export function Dashboard() {
                       <div className="flex items-center gap-4 text-zinc-500 dark:text-zinc-400">
                         <div className="flex items-center gap-2">
                           <Clock size={14} />
-                          <span className="font-mono text-xs">{post.readTime}</span>
+                          <span className="font-mono text-xs">{article.read_time}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <MessageSquare size={14} />
-                          <span className="font-mono text-xs">{post.comments} comments</span>
+                          <span className="font-mono text-xs">{article.category}</span>
                         </div>
                       </div>
 
