@@ -145,13 +145,13 @@ export function MarkdownEditor({ content, onChange, className }: MarkdownEditorP
     const style = document.createElement("style");
     style.textContent = `
       .prose-mirror-editor {
-        caret-color: transparent !important;
+        caret-color: rgb(59, 130, 246) !important;
       }
       .prose-mirror-editor::selection {
         background-color: rgba(59, 130, 246, 0.2);
       }
       .dark .prose-mirror-editor {
-        caret-color: transparent !important;
+        caret-color: rgb(96, 165, 250) !important;
       }
       .dark .prose-mirror-editor::selection {
         background-color: rgba(96, 165, 250, 0.2);
