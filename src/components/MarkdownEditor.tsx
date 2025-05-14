@@ -44,8 +44,14 @@ interface MarkdownEditorProps {
 export function MarkdownEditor({ content, onChange, className }: MarkdownEditorProps) {
   // Convert markdown to HTML for the editor
   const markdownToHtml = async (markdown: string) => {
-    const result = await unified().use(remarkParse).use(remarkHtml).process(markdown);
-    return result.toString();
+    if (!markdown?.trim()) return "";
+    try {
+      const result = await unified().use(remarkParse).use(remarkHtml).process(markdown);
+      const html = result.toString();
+      return html;
+    } catch {
+      return "";
+    }
   };
 
   const editor = useEditor({
@@ -127,12 +133,30 @@ export function MarkdownEditor({ content, onChange, className }: MarkdownEditorP
 
   // Initialize editor with markdown content
   useEffect(() => {
-    if (editor && content) {
-      markdownToHtml(content).then((html) => {
-        editor.commands.setContent(html);
-      });
-    }
+    if (!editor || !content) return;
+
+    const initializeContent = async () => {
+      try {
+        const html = await markdownToHtml(content);
+        if (html && editor && !editor.isDestroyed) {
+          editor.commands.setContent(html);
+        }
+      } catch (error) {
+        console.error("Error initializing editor content:", error);
+      }
+    };
+
+    initializeContent();
   }, [editor, content]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (editor) {
+        editor.destroy();
+      }
+    };
+  }, [editor]);
 
   // Add custom styles for the editor
   useEffect(() => {
