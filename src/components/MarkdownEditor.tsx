@@ -15,11 +15,12 @@ import json from "highlight.js/lib/languages/json";
 import python from "highlight.js/lib/languages/python";
 import bash from "highlight.js/lib/languages/bash";
 import { cn } from "../lib/utils";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Toolbar } from "./editor/Toolbar";
 import { EditorContentArea } from "./editor/EditorContent";
 import { SettingsModal } from "./editor/SettingsModal";
 import type { Tables } from "../../database.types";
+import { uploadArticleImage } from "../lib/supabase";
 
 // Register languages
 const lowlight = createLowlight(common);
@@ -55,6 +56,25 @@ export function MarkdownEditor({
   onTagsChange,
 }: MarkdownEditorProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Handler for file input change
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !article?.id || !editor) return;
+    try {
+      const url = await uploadArticleImage(article.id, file);
+      editor.chain().focus().setImage({ src: url }).run();
+    } catch {
+      alert("Image upload failed");
+    }
+  };
+
+  // Handler to trigger file input from toolbar
+  const triggerImageUpload = () => {
+    fileInputRef.current?.click();
+  };
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -99,22 +119,20 @@ export function MarkdownEditor({
     editorProps: {
       handlePaste: (view, event) => {
         const items = event.clipboardData?.items;
-        if (!items || !editor) return false;
+        if (!items || !editor || !article?.id) return false;
 
         for (const item of items) {
           if (item.type.indexOf("image") === 0) {
             event.preventDefault();
             const file = item.getAsFile();
             if (!file) continue;
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-              const base64Image = e.target?.result as string;
-              if (base64Image && editor) {
-                editor.chain().focus().setImage({ src: base64Image }).run();
-              }
-            };
-            reader.readAsDataURL(file);
+            uploadArticleImage(article.id, file)
+              .then((url) => {
+                editor.chain().focus().setImage({ src: url }).run();
+              })
+              .catch(() => {
+                alert("Image upload failed");
+              });
             return true;
           }
         }
@@ -324,7 +342,18 @@ export function MarkdownEditor({
         className
       )}
     >
-      <Toolbar editor={editor} onSettingsClick={() => setIsSettingsOpen(true)} />
+      <input
+        type="file"
+        accept="image/*"
+        style={{ display: "none" }}
+        ref={fileInputRef}
+        onChange={handleFileChange}
+      />
+      <Toolbar
+        editor={editor}
+        onSettingsClick={() => setIsSettingsOpen(true)}
+        onImageUpload={triggerImageUpload}
+      />
       <EditorContentArea editor={editor} />
       <SettingsModal
         article={article}

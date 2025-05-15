@@ -28,9 +28,10 @@ import {
 interface ToolbarProps {
   editor: Editor;
   onSettingsClick: () => void;
+  onImageUpload?: () => void;
 }
 
-export function Toolbar({ editor, onSettingsClick }: ToolbarProps) {
+export function Toolbar({ editor, onSettingsClick, onImageUpload }: ToolbarProps) {
   const { theme, setTheme } = useTheme();
 
   const addLink = () => {
@@ -207,7 +208,7 @@ export function Toolbar({ editor, onSettingsClick }: ToolbarProps) {
           <ToolbarButton onClick={addLink} isActive={editor.isActive("link")} title="Add Link">
             <LinkIcon className="w-4 h-4 text-white" />
           </ToolbarButton>
-          <ToolbarButton onClick={addImage} title="Add Image">
+          <ToolbarButton onClick={onImageUpload || addImage} title="Add Image">
             <ImageIcon className="w-4 h-4 text-white" />
           </ToolbarButton>
         </ToolbarSection>

@@ -9,3 +9,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+
+export async function uploadArticleImage(articleId: string, file: File): Promise<string> {
+  const filePath = `${articleId}/${file.name}`;
+  const { error } = await supabase.storage.from("images").upload(filePath, file, {
+    upsert: true,
+  });
+
+  if (error) throw error;
+
+  const { data: publicUrlData } = supabase.storage.from("images").getPublicUrl(filePath);
+
+  return publicUrlData.publicUrl;
+}
