@@ -1,54 +1,130 @@
-# React + TypeScript + Vite
+# Blog CMS
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern blog content management system built with React, TypeScript, and Supabase.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Drag & Drop Markdown Upload**: Upload local markdown files with frontmatter support
+- **Real-time Editor**: Rich text editor with markdown support
+- **Article Management**: Create, edit, and publish articles
+- **Tag System**: Organize articles with tags
+- **Dark/Light Theme**: Toggle between themes
+- **Responsive Design**: Works on desktop and mobile
 
-## Expanding the ESLint configuration
+## Quick Start
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Prerequisites
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+- Node.js 18+
+- Supabase account and project
+
+### Setup
+
+1. Clone the repository:
+
+```bash
+git clone <repository-url>
+cd blog-cms
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+2. Install dependencies:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+```bash
+npm install
 ```
+
+3. Set up environment variables:
+
+```bash
+cp .env.example .env.local
+```
+
+Add your Supabase credentials:
+
+```
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+4. Start the development server:
+
+```bash
+npm run dev
+```
+
+## Using the Drag & Drop Uploader
+
+The new drag-and-drop uploader allows you to quickly import markdown files from your local system:
+
+1. Navigate to the dashboard and click "Upload Files"
+2. Drag and drop your `.md` or `.markdown` files onto the upload area
+3. The system will automatically parse frontmatter and extract metadata
+4. Click "Save" on individual files or "Save All" to process them all
+5. Files are automatically converted to articles in your database
+
+### Supported Frontmatter
+
+Your markdown files can include frontmatter with the following fields:
+
+```yaml
+---
+title: "Your Article Title"
+excerpt: "A brief description of your article"
+category: "Technology"
+date: "2024-01-01"
+tags: ["javascript", "react", "tutorial"]
+---
+# Your Article Content
+
+Your markdown content goes here...
+```
+
+### Edge Function
+
+The uploader uses a Supabase Edge Function (`process-markdown`) to handle file processing. To deploy it:
+
+```bash
+supabase functions deploy process-markdown
+```
+
+## Database Schema
+
+The system uses the following tables:
+
+- `articles`: Main article content and metadata
+- `tags`: Article tags
+- `article_tags`: Many-to-many relationship between articles and tags
+
+## Development
+
+### Available Scripts
+
+- `npm run dev`: Start development server
+- `npm run build`: Build for production
+- `npm run preview`: Preview production build
+- `npm run lint`: Run ESLint
+
+### Project Structure
+
+```
+src/
+├── components/          # Reusable UI components
+├── pages/              # Page components
+├── contexts/           # React contexts
+├── hooks/              # Custom hooks
+├── lib/                # Utility functions and config
+└── supabase/
+    └── functions/      # Edge functions
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+
+MIT

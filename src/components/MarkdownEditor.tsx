@@ -21,6 +21,7 @@ import { EditorContentArea } from "./editor/EditorContent";
 import { SettingsModal } from "./editor/SettingsModal";
 import type { Tables } from "../../database.types";
 import { uploadArticleImage } from "../lib/supabase";
+import { Markdown } from "tiptap-markdown";
 
 // Register languages
 const lowlight = createLowlight(common);
@@ -110,17 +111,23 @@ export function MarkdownEditor({
           class: "rounded-xl border border-zinc-200 dark:border-zinc-700 max-w-full",
         },
       }),
+      Markdown.configure({
+        html: true,
+        transformPastedText: true,
+        transformCopiedText: true,
+      }),
     ],
     content: content || "",
     onUpdate: ({ editor }: { editor: Editor }) => {
-      const html = editor.getHTML();
-      onChange(html);
+      const markdown = editor.storage.markdown.getMarkdown();
+      onChange(markdown);
     },
     editorProps: {
       handlePaste: (view, event) => {
         const items = event.clipboardData?.items;
         if (!items || !editor || !article?.id) return false;
 
+        // Handle image pasting
         for (const item of items) {
           if (item.type.indexOf("image") === 0) {
             event.preventDefault();
@@ -136,6 +143,8 @@ export function MarkdownEditor({
             return true;
           }
         }
+
+        // Let the markdown extension handle the paste
         return false;
       },
       handleClick: () => {

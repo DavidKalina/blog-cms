@@ -1,5 +1,5 @@
 import { Badge } from "../components/ui/badge";
-import { BookOpen, Clock, Plus } from "lucide-react";
+import { BookOpen, Clock, Plus, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
@@ -45,13 +45,22 @@ export function Dashboard() {
             <p className="font-mono text-lg md:text-xl text-zinc-600 dark:text-zinc-400 mb-8">
               Manage your blog posts, drafts, and published articles all in one place.
             </p>
-            <Link
-              to="/editor"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-full font-mono text-sm hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
-            >
-              <Plus size={16} />
-              New Article
-            </Link>
+            <div className="flex items-center gap-4 justify-center">
+              <Link
+                to="/editor"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-full font-mono text-sm hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
+              >
+                <Plus size={16} />
+                New Article
+              </Link>
+              <Link
+                to="/upload"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-full font-mono text-sm hover:bg-blue-700 transition-colors"
+              >
+                <Upload size={16} />
+                Upload Files
+              </Link>
+            </div>
           </div>
         </div>
       </div>
