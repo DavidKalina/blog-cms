@@ -1,5 +1,5 @@
 import { Badge } from "../components/ui/badge";
-import { BookOpen, Clock, Plus, Upload } from "lucide-react";
+import { BookOpen, Clock, Plus, Upload, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
@@ -59,6 +59,13 @@ export function Dashboard() {
               >
                 <Upload size={16} />
                 Upload Files
+              </Link>
+              <Link
+                to="/articles"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-full font-mono text-sm hover:bg-green-700 transition-colors"
+              >
+                <FileText size={16} />
+                Manage Articles
               </Link>
             </div>
           </div>
